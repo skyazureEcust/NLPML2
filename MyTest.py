@@ -1,0 +1,1 @@
+print(b'\ufffd'.decode('utf-8'))
