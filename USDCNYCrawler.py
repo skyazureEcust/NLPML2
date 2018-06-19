@@ -4,13 +4,12 @@ import json
 import CrawlerLogger as CrawlerLogger
 import CrawlerUtil as CrawlerUtil
 # 根据时间段抓取美元指数
-def getUSDIndex(data_type, data_count):
-    urlPattern = 'https://forexdata.wallstreetcn.com/kline?prod_code=USDOLLARINDEX&candle_period=' \
+def getUSDCNY(data_type, data_count):
+    urlPattern = 'https://forexdata.wallstreetcn.com/kline?prod_code=USDCNY&candle_period=' \
                  + str(data_type) + \
                  '&fields=time_stamp,open_px,close_px,high_px,low_px,ma5,ma10,ma20,ma60,upper,mid,' \
                  'lower,diff,dea,macd,k,d,j,rsi6,rsi12,rsi24&data_count=' \
                  + str(data_count)  # 需要爬数据的网址
-
     logger.info(urlPattern)
     page = requests.Session().get(urlPattern)
     page.encoding = 'utf-8'
@@ -25,7 +24,7 @@ def getUSDIndex(data_type, data_count):
             fileContent += data_fields[item_i] + ','
         fileContent += '\n'
         # 处理数据
-        data_list = candle_data['USDOLLARINDEX']
+        data_list = candle_data['USDCNY']
         for item_i in range(len(data_list)):
             data_items = data_list[item_i]
             data_item = ''
@@ -39,10 +38,10 @@ def getUSDIndex(data_type, data_count):
 
         logger.info("Finished With %s Items Crawled." % (len(data_list)))
 
-    CrawlerUtil.saveToFile('output/USDIndex_%s.csv' % CrawlerUtil.getNow(), fileContent)
+    CrawlerUtil.saveToFile('output/USDCNY_%s.csv' % CrawlerUtil.getNow(), fileContent)
 
 
-logger = CrawlerLogger.Logger("logs/USDIndexCrwaler.log")
+logger = CrawlerLogger.Logger("logs/USDCNYCrwaler.log")
 if(len(sys.argv) > 2):
     for num in range(1, 3):
         logger.info("parameter %d is %s " % (num, sys.argv[num]))
@@ -61,4 +60,4 @@ else:
     data_count = 256
     logger.warning('The Number of Argument Should Be 2 like \"8 256\", Now Set To \"%s\", \"%s\"'
                    % (data_type, data_count))
-getUSDIndex(data_type, data_count)
+getUSDCNY(data_type, data_count)

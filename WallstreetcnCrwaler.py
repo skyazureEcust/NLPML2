@@ -56,7 +56,7 @@ def getNewsItem(startDate, endDate):
     logger.info("Finished With %s Pages Crawled."%(pageNum))
 
 
-logger = CrawlerLogger.Logger("log/WallstreetcnCrwaler.log")
+logger = CrawlerLogger.Logger("logs/WallstreetcnCrwaler.log")
 startDate = ''
 endDate = ''
 print("the script name is ", sys.argv[0])
