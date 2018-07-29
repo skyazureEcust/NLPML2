@@ -6,11 +6,55 @@ SECRET_KEY = 'xjXGEWN8VAvBhxaZ9EcAGl7E0ATLXnmj'
 
 client = AipNlp(APP_ID, API_KEY, SECRET_KEY)
 
-text = "马其顿外长和希腊外长6月17日正式签署协议，马其顿国名将更改为“北马其顿共和国”，结束两国20多年的争端。新国名将在国内及国际上使用，并将写入马其顿宪法。这项协议仍需要马其顿议会和马其顿全民公投才能最终通过"
 
-""" 调用词法分析 """
-result = client.lexer(text)
-wordList = result['items']
-for item_i in range(len(wordList)):
-    print(wordList[item_i]['item'])
+# 词法分析
+def lexer(text):
+    # text = "伊朗：三个OPEC成员国将投票反对增产"
+    try:
+        result = client.lexer(text)
+    except Exception as e:
+        print(text, e)
+        result = client.lexer(text)
+    if result:
+        items = result['items']
+        word_list = []
+        for item_i in range(len(items)):
+            word_list.append(items[item_i]['item'])
+        return word_list
+    else:
+        print('Error Occurs in Processing ', text)
+        return []
 
+
+# 情感倾向分析
+# sentiment 表示情感极性分类结果, 0:负向，1:中性，2:正向
+# confidence 表示分类的置信度
+# positive_prob	 表示属于积极类别的概率
+# negative_prob	表示属于消极类别的概率
+def sentiment_classify(text):
+    result = client.sentimentClassify(text)
+    items = result['items']
+    return items
+
+
+# 提取标签
+def keyword(text):
+    result = client.keyword(text, text)
+    items = result['items']
+    return items
+
+
+# 评论观点
+# prop	匹配上的属性词
+# adj	匹配上的描述词
+# sentiment	该情感搭配的极性（0表示消极，1表示中性，2表示积极）
+# begin_pos	该情感搭配在句子中的开始位置
+# end_pos	该情感搭配在句子中的结束位置
+# abstract	对应于该情感搭配的短句摘要
+def comment_tag(text):
+    options = dict()
+    options["type"] = 8
+    result = client.commentTag(text, options)
+    # items = result['items']
+    print(result)
+    return result
