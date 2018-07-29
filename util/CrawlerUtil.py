@@ -4,6 +4,7 @@ import re
 import xlrd
 import xlwt
 import datetime
+import csv
 
 
 # 时间格式转换Long：Date
@@ -83,6 +84,22 @@ def write_excel(s_filename, list_time, list_data):
         i += 1
     # 保存excel
     book.save(s_filename)
+
+
+# 读取csv文件
+def read_csv(s_path):
+    with open(s_path) as csv_file:
+        reader = csv.reader(csv_file)
+        return list(reader)
+
+
+# 保存为csv文件
+def write_csv(s_filename, list_data):
+    # 使用数字和字符串的数字都可以
+    with open(s_filename, 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        for row in list_data:
+            writer.writerow(row)
 
 
 # 读取Excel日期类型数据，返回datetime类型

@@ -3,25 +3,23 @@ from newsnlp import BaiduNLPProcessor
 # 特征文件路径
 FEATURE_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/feature/feature.xlsx'
 # 原始数据文件路径
-RAW_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/data/华尔街见闻_外汇_20160630_20180617.xlsx'
-# RAW_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/data/华尔街见闻_外汇_demo.xlsx'
+# RAW_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/data/华尔街见闻_外汇_20160630_20180617.xlsx'
+RAW_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/data/华尔街见闻_外汇_demo.xlsx'
 # 新闻分词后保存路径
-SEGMENTED_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/lab/data/SEGMENTED_NEWS.xls'
+SEGMENTED_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/lab/data/SEGMENTED_NEWS.csv'
 # 全局变量
 # 特征唯一标识
-featureKeyList = []
+featureKeyList = list()
 # 特征信息列表（第一列为特征名称）
-featureValueList = []
-# 新闻时间列表
-newsTimeList = []
+featureValueList = list()
 # 新闻列表
-newsList = []
+newsList = list()
 # 新闻分词后列表
-newsSegmentationList = []
-# 带有关键词的新闻时间列表
-newsWithKeywordTimeList = []
+newsSegmentationList = list()
 # 带有关键词的新闻列表
-newsWithKeywordList = []
+newsWithKeywordList = list()
+# 有关键词匹配的新闻列表
+newsMappedList = list()
 
 
 # 1.读取特征表
@@ -52,38 +50,48 @@ def prepare_raw_news():
     raw_news_table = raw_news_data.sheet_by_index(0)
     raw_news_rows = raw_news_table.nrows
     for rowN in range(0, raw_news_rows):
-        news_time = CrawlerUtil.get_datetime_from_cell(raw_news_table.cell_value(rowN, 0))
-        newsTimeList.append(news_time)
-        newsList.append(raw_news_table.cell_value(rowN, 1))
+        news_item = list()
+        news_index = raw_news_table.cell_value(rowN, 0)
+        news_time = CrawlerUtil.get_datetime_from_cell(raw_news_table.cell_value(rowN, 1))
+        news_content = raw_news_table.cell_value(rowN, 2)
+        news_item.append(news_index)
+        news_item.append(news_time)
+        news_item.append(news_content)
+        newsList.append(news_item)
     logger.info("Prepare Raw News...Done!")
 
 
 # 3.对每条新闻进行分词
 def news_segment():
     logger.info("In Segment News...")
-    for newsItem in newsList:
-        word_list = BaiduNLPProcessor.lexer(newsItem)
+    for news_item in newsList:
+        word_list = BaiduNLPProcessor.lexer(news_item[2])
+        word_list.insert(0, CrawlerUtil.get_string_from_datetime(news_item[0]))
+        word_list.insert(1, CrawlerUtil.get_string_from_datetime(news_item[1]))
         newsSegmentationList.append(word_list)
-        CrawlerUtil.write_excel(SEGMENTED_NEWS_PATH, newsTimeList, newsSegmentationList)
+    CrawlerUtil.write_csv(SEGMENTED_NEWS_PATH, newsSegmentationList)
     logger.info("Segment News...Done!")
 
 
 # 4.对每条新闻进行特征关键词匹配
 def news_keyword_map():
     logger.info("In News Keyword Map...")
-    i_news = 0
     count = 0
     for word_list in newsSegmentationList:
-        for word in word_list:
+        for word in word_list[2]:
+            news_mapped = list()
+            news_mapped.append(word_list[0])
+            news_mapped.append(word_list[1])
             if word in featureValueList:
-                newsWithKeywordTimeList.append(newsTimeList[i_news])
-                newsWithKeywordList.append(word_list)
+                news_mapped.append(word)
                 count += 1
-            i_news += 1
+            if len(news_mapped) > 2:
+                newsMappedList.append(news_mapped)
     logger.info("News Keyword Map...Done!")
     logger.info("News With Keyword: " + count)
 
 # 5.对匹配到特征的新闻进行情感分析
+# def news_sentiment():
 
 
 
