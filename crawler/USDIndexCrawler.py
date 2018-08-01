@@ -43,7 +43,7 @@ def get_usd_index(i_type, i_count):
     CrawlerUtil.save_to_file('output/USDIndex_%s.csv' % CrawlerUtil.get_now(), file_content)
 
 
-logger = CrawlerLogger.Logger("logs/USDIndexCrwaler.log")
+logger = CrawlerLogger.Logger("../logs/USDIndexCrwaler.log")
 data_type = 0
 data_count = 0
 if len(sys.argv) > 2:

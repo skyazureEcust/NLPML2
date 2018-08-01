@@ -42,7 +42,7 @@ def get_usd_cny(p_type, p_count):
     CrawlerUtil.save_to_file('output/USDCNY_%s.csv' % CrawlerUtil.get_now(), file_content)
 
 
-logger = CrawlerLogger.Logger("logs/USDCNYCrwaler.log")
+logger = CrawlerLogger.Logger("../logs/USDCNYCrwaler.log")
 data_type = 0
 data_count = 0
 if len(sys.argv) > 2:
