@@ -1,19 +1,18 @@
 from util import CrawlerUtil as CrawlerUtil, CrawlerLogger as CrawlerLogger
 from newsnlp import BaiduNLPProcessor
 # 特征文件路径
-FEATURE_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/feature/feature.xlsx'
+FEATURE_PATH = '../files/FEATURE.xlsx'
 # 原始数据文件路径
-RAW_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/data/华尔街见闻_外汇_20160630_20180617.xlsx'
-# RAW_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/data/华尔街见闻_外汇_0_10000.xlsx'
-# RAW_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/data/华尔街见闻_外汇_demo.xlsx'
+RAW_NEWS_PATH = '../files/WALLSTREETCN_FX_20160630_20180617.xlsx'
 # 新闻分词后保存路径
-SEGMENTED_NEWS_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/lab/data/SEGMENTED_NEWS.csv'
-SEGMENTED_NEWS_PATH_TEMP = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/lab/data/SEGMENTED_NEWS_TEMP.csv'
+SEGMENTED_NEWS_PATH = '../files/SEGMENTED_NEWS.csv'
+# 特征列表保存路径
+FEATURE_ITEM_PATH = '../files/FEATURE_ITEM.csv'
 # 特征向量保存路径
-FEATURE_VECTOR_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/lab/data/FEATURE_VECTOR.csv'
-FEATURE_VECTOR_PATH_TEMP = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/lab/data/FEATURE_VECTOR_TEMP.csv'
+FEATURE_VECTOR_PATH = '../files/FEATURE_VECTOR.csv'
 # 实际价格文件路径
-ORIGIN_PRICE_PATH = 'D:/CFETSIT/外汇项目组/技术工作/技术研究/舆情监测/原始数据获取/data/USDCNY20160630_20171230.csv'
+ORIGIN_PRICE_PATH = '../files/USDCNY20160630_20171230.csv'
+
 # 全局变量
 # 特征字典[AAAA:黄金]
 featureDict = dict()
@@ -24,6 +23,8 @@ newsSegmentationList = list()
 # 有关键词匹配的新闻列表：[1, 2018/6/17  20:17:46, OPEC]
 newsMappedList = list()
 # 情感特征列表：[1, 2018/6/17  20:17:46, [0, 0, 0.6, 0]]
+featureItemList = list()
+# 特征向量列表：[0, 0, 0.6, 0]
 featureVectorList = list()
 # USD/CNY价格数据列表：[2016/6/30 15:00,	6.6433]
 originalPriceList = list()
@@ -97,9 +98,9 @@ def news_keyword_map():
         news_mapped.append(word_list[1])
         for word_index in range(2, len(word_list)):
             word = word_list[word_index]
-            if word in featureDict.values():
-                if word not in news_mapped:
-                    news_mapped.append(word)
+            for feature_word in featureDict.values():
+                if feature_word in word and feature_word not in news_mapped:
+                    news_mapped.append(feature_word)
         if len(news_mapped) > 2:
             count += 1
             newsMappedList.append(news_mapped)
@@ -132,9 +133,12 @@ def news_sentiment():
             else:
                 feature_vector.append(0)
         feature_vector_item.append(feature_vector)
-        featureVectorList.append(feature_vector_item)
+        featureItemList.append(feature_vector_item)
+        feature_vector.insert(0, news_time)
+        featureVectorList.append(feature_vector)
         logger.info(count)
         count += 1
+    CrawlerUtil.write_csv(FEATURE_ITEM_PATH, featureItemList)
     CrawlerUtil.write_csv(FEATURE_VECTOR_PATH, featureVectorList)
     logger.info("News Sentiment Done!")
 
@@ -143,6 +147,29 @@ def news_sentiment():
 def prepare_original_price():
     global originalPriceList
     originalPriceList = CrawlerUtil.read_csv(ORIGIN_PRICE_PATH)
+
+
+# 统计特征向量的计算
+def feature_col_count():
+    logger.info("In Count Feature Appear...")
+    prepare_feature()
+    feature_count_dict = dict()
+    global featureVectorList
+    featureVectorList = CrawlerUtil.read_csv(FEATURE_VECTOR_PATH)
+    feature_count_list = [0]*len(featureDict.keys())
+    for feature_vector in featureVectorList:
+        feature_index = 0
+        for feature_value_index in range(1, len(feature_vector)):
+            if feature_vector[feature_value_index] != '0':
+                feature_count_list[feature_index] += 1
+            feature_index += 1
+    feature_index = 0
+    for key in featureDict.keys():
+        feature_count = feature_count_list[feature_index]
+        feature_index += 1
+        feature_count_dict[key] = feature_count
+        print(key, ",", feature_count)
+    logger.info("Count Feature Appear Done!")
 
 
 logger = CrawlerLogger.Logger("../logs/raw_data_processor.log")

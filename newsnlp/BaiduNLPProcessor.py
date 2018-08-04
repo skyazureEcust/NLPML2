@@ -99,4 +99,15 @@ def sentiment_classify_try(text):
     return round(sentiment_score, 4)
 
 
+# 词义相似度分析
+#  score 相似度分数
+def word_sim(s_word1, s_word2):
+    # 调用词义相似度
+    return client.wordSimEmbedding(s_word1, s_word2)
+    # #如果有可选参数
+    # options = {}
+    # options["mode"] = 0
+    # # 带参数调用词义相似度
+    # client.wordSimEmbedding(word1, word2, options)
+
 logger = CrawlerLogger.Logger("../logs/baidu_npl_processor.log")
