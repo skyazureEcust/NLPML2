@@ -189,7 +189,6 @@ def generate_feature_vector():
     originalPriceList = CrawlerUtil.read_csv(ORIGIN_PRICE_PATH)
     # 新闻从20160630开始，价格从20160701开始到20170630
     last_news_begin = 0
-    feature_item = list()
     price_start_time = '2016/07/01  09:30:00'
     price_end_time = '2017/06/30  23:59:59'
     for current_price_item in originalPriceList:
@@ -222,9 +221,8 @@ def generate_feature_vector():
                                     influence_feature_vector[value_i] += float(current_news_feature[value_i + 1]) \
                                                                          * influence_score
                             is_finished = True
-                            feature_item.append(influence_feature_vector)
-                            feature_item.append(price_delta_rate)
-                            featureVectorList.append(feature_item)
+                            influence_feature_vector.append(price_delta_rate)
+                            featureVectorList.append(influence_feature_vector)
                             break
                 elif interval_seconds < 0:
                     is_finished = True
