@@ -198,15 +198,15 @@ def generate_feature_vector():
             price_delta = (float(current_price_item[1]) - float(pre_price_item[1]))
             # 计算价格的变化率
             last_interval_seconds = CrawlerUtil.get_interval_seconds(CrawlerUtil.get_datetime_from_string(
-                pre_price_item[0]), CrawlerUtil.get_datetime_from_string(current_price_item[0]))
+                current_price_item[0]), CrawlerUtil.get_datetime_from_string(pre_price_item[0]))
             price_delta_rate = round(price_delta * FEATURE_VECTOR_SCALE / last_interval_seconds, 6)
             current_time = CrawlerUtil.get_datetime_from_string(current_price_item[0])
             logger.debug(current_time)
             for news_feature_begin_index in range(last_news_begin, len(newsFeatureList) - 1):
                 if is_finished:
                     break
-                interval_seconds = CrawlerUtil.get_interval_seconds(CrawlerUtil.get_datetime_from_string(
-                    newsFeatureList[news_feature_begin_index][0]), current_time)
+                interval_seconds = CrawlerUtil.get_interval_seconds(
+                    current_time, CrawlerUtil.get_datetime_from_string(newsFeatureList[news_feature_begin_index][0]))
                 if 0 <= interval_seconds <= 1200:
                     influence_feature_vector = [0] * feature_size
                     for news_feature_end_index in range(news_feature_begin_index, len(newsFeatureList) - 1):
@@ -236,11 +236,11 @@ def generate_feature_vector():
 
 # 定义影响衰减函数
 def decay_influence(dt_news_time, dt_current_time):
-    delta_second = (dt_current_time - dt_news_time).seconds
+    delta_second = CrawlerUtil.get_interval_seconds(dt_current_time, dt_news_time)
     if delta_second > NEWS_INFLUENCE_DACAY_THRESHOLD:
         return 0
     if delta_second < NEWS_INFLUENCE_MOST:
         influence_score = 1/60 * delta_second
     else:
-        influence_score = round(1200/1140 - 1/1140 * delta_second)
+        influence_score = 1200/1140 - 1/1140 * delta_second
     return round(influence_score * FEATURE_VECTOR_SCALE, 4)

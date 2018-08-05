@@ -109,6 +109,6 @@ def get_datetime_from_cell(s_cell):
 
 # 比较两个时间相差的秒数
 def get_interval_seconds(dt_time1, dt_time2):
-    interval = dt_time2 - dt_time1
+    interval = dt_time1 - dt_time2
     interval_seconds = interval.days * 24 * 3600 + interval.seconds
     return interval_seconds
