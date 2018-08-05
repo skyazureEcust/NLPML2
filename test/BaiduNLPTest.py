@@ -1,5 +1,4 @@
 from newsnlp import BaiduNLPProcessor
-import re
 
 # text = '人民币今天上涨了3个百分点'
 # result = BaiduNLPProcessor.sentiment_classify(text)
@@ -14,4 +13,3 @@ import re
 word1 = '白银'
 word2 = '黄金'
 print(BaiduNLPProcessor.word_sim(word1, word2))
-

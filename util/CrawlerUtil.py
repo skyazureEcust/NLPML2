@@ -105,3 +105,10 @@ def write_csv(s_filename, list_data):
 # 读取Excel日期类型数据，返回datetime类型
 def get_datetime_from_cell(s_cell):
     return xlrd.xldate.xldate_as_datetime(s_cell, 0)
+
+
+# 比较两个时间相差的秒数
+def get_interval_seconds(dt_time1, dt_time2):
+    interval = dt_time2 - dt_time1
+    interval_seconds = interval.days * 24 * 3600 + interval.seconds
+    return interval_seconds

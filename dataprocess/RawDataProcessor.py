@@ -4,7 +4,7 @@ logger = CrawlerLogger.Logger("../logs/raw_data_processor.log")
 # 特征文件路径
 FEATURE_PATH = '../files/FEATURE.xlsx'
 # 原始数据文件路径
-RAW_NEWS_PATH = '../files/WALLSTREETCN_FX_20160630_20180617.xlsx'
+RAW_NEWS_PATH = '../files/RAW_NEWS.xlsx'
 # 新闻分词后保存路径
 SEGMENTED_NEWS_PATH = '../files/SEGMENTED_NEWS.csv'
 # 新闻情感分析后保存路径
@@ -12,9 +12,15 @@ NEWS_ITEM_PATH = '../files/NEWS_ITEM.csv'
 # 新闻特征保存路径
 NEWS_FEATURE_PATH = '../files/NEWS_FEATURE.csv'
 # 实际价格文件路径
-ORIGIN_PRICE_PATH = '../files/USDCNY20160630_20171230.csv'
+ORIGIN_PRICE_PATH = '../files/ORIGIN_PRICE.csv'
 # 特征向量文件路径
 FEATURE_VECTOR_PATH = '../files/FEATURE_VECTOR.csv'
+# 新闻影响衰减极限值：预设为1200s
+NEWS_INFLUENCE_DACAY_THRESHOLD = 1200
+# 新闻影响极大值所在的时间点：预设为60s
+NEWS_INFLUENCE_MOST = 60
+# 特征向量缩放倍数
+FEATURE_VECTOR_SCALE = 10000
 
 # 全局变量
 # 特征字典[AAAA:黄金]
@@ -155,7 +161,7 @@ def feature_col_count():
     feature_count_dict = dict()
     global newsFeatureList
     newsFeatureList = CrawlerUtil.read_csv(NEWS_FEATURE_PATH)
-    feature_count_list = [0]*len(featureDict.keys())
+    feature_count_list = [0] * len(featureDict.keys())
     for feature_vector in newsFeatureList:
         feature_index = 0
         for feature_value_index in range(1, len(feature_vector)):
@@ -167,31 +173,74 @@ def feature_col_count():
         feature_count = feature_count_list[feature_index]
         feature_index += 1
         feature_count_dict[key] = feature_count
-        print(key, ",", feature_count)
+        row_item = key + "," + feature_count
+        logger.info(row_item)
     logger.info("Count Feature Appear Done!")
 
 
 # 生成特征向量，并与目标值对应
 def generate_feature_vector():
     logger.info("In Generate Feature Vector...")
+    prepare_feature()
+    feature_size = len(featureDict.keys())
     global newsFeatureList
     newsFeatureList = CrawlerUtil.read_csv(NEWS_FEATURE_PATH)
     global originalPriceList
     originalPriceList = CrawlerUtil.read_csv(ORIGIN_PRICE_PATH)
-    # 新闻从20160630开始，价格从20160701开始
-    current_news_feature = newsFeatureList[0]
-    current_price = originalPriceList[0]
-    current_price_index = 0
-    print(current_news_feature)
-    print(current_price)
-    for next_index in range(1, len(newsFeatureList)):
-        next_news_feature = newsFeatureList[next_index]
-        next_news_time = next_news_feature[0]
-        for next_price_index in range(current_price_index + 1, len(originalPriceList)):
-            next_price = -1
-            if originalPriceList[next_price_index][0] >= next_news_time:
-                next_price = originalPriceList[next_price_index][1]
-            if next_price != -1:
-                price_delta = next_price - current_price
-        next_index += 1
+    # 新闻从20160630开始，价格从20160701开始到20170630
+    last_news_begin = 0
+    feature_item = list()
+    price_start_time = '2016/07/01  09:30:00'
+    price_end_time = '2017/06/30  23:59:59'
+    for current_price_item in originalPriceList:
+        is_finished = False
+        if price_start_time < current_price_item[0] < price_end_time:
+            price_delta = (float(current_price_item[1]) - float(pre_price_item[1]))
+            # 计算价格的变化率
+            last_interval_seconds = CrawlerUtil.get_interval_seconds(CrawlerUtil.get_datetime_from_string(
+                pre_price_item[0]), CrawlerUtil.get_datetime_from_string(current_price_item[0]))
+            price_delta_rate = round(price_delta * FEATURE_VECTOR_SCALE / last_interval_seconds, 6)
+            current_time = CrawlerUtil.get_datetime_from_string(current_price_item[0])
+            logger.debug(current_time)
+            for news_feature_begin_index in range(last_news_begin, len(newsFeatureList) - 1):
+                if is_finished:
+                    break
+                interval_seconds = CrawlerUtil.get_interval_seconds(CrawlerUtil.get_datetime_from_string(
+                    newsFeatureList[news_feature_begin_index][0]), current_time)
+                if 0 <= interval_seconds <= 1200:
+                    influence_feature_vector = [0] * feature_size
+                    for news_feature_end_index in range(news_feature_begin_index, len(newsFeatureList) - 1):
+                        if is_finished:
+                            break
+                        if CrawlerUtil.get_datetime_from_string(newsFeatureList[news_feature_end_index][0]) \
+                                > current_time:
+                            for news_feature_index in range(news_feature_begin_index, news_feature_end_index - 1):
+                                current_news_feature = newsFeatureList[news_feature_index]
+                                influence_score = decay_influence(CrawlerUtil.get_datetime_from_string(
+                                    current_news_feature[0]), current_time)
+                                for value_i in range(0, feature_size):
+                                    influence_feature_vector[value_i] += float(current_news_feature[value_i + 1]) \
+                                                                         * influence_score
+                            is_finished = True
+                            feature_item.append(influence_feature_vector)
+                            feature_item.append(price_delta_rate)
+                            featureVectorList.append(feature_item)
+                            break
+                elif interval_seconds < 0:
+                    is_finished = True
+                last_news_begin = news_feature_begin_index
+        pre_price_item = current_price_item
+    CrawlerUtil.write_csv(FEATURE_VECTOR_PATH, featureVectorList)
     logger.info("Generate Feature Vector Done!")
+
+
+# 定义影响衰减函数
+def decay_influence(dt_news_time, dt_current_time):
+    delta_second = (dt_current_time - dt_news_time).seconds
+    if delta_second > NEWS_INFLUENCE_DACAY_THRESHOLD:
+        return 0
+    if delta_second < NEWS_INFLUENCE_MOST:
+        influence_score = round(5/3 * delta_second, 2)
+    else:
+        influence_score = round(1200/1140 - 1/1140 * delta_second)
+    return round(influence_score * FEATURE_VECTOR_SCALE, 4)
