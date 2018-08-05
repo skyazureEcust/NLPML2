@@ -39,7 +39,7 @@ def get_usd_cny(p_type, p_count):
 
         logger.info("Finished With %s Items Crawled." % (len(data_list)))
 
-    CrawlerUtil.save_to_file('output/USDCNY_%s.csv' % CrawlerUtil.get_now(), file_content)
+    CrawlerUtil.save_to_file('../files/USDCNY_%s.csv' % CrawlerUtil.get_now(), file_content)
 
 
 logger = CrawlerLogger.Logger("../logs/USDCNYCrwaler.log")

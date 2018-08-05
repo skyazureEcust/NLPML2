@@ -1,17 +1,20 @@
 from util import CrawlerUtil as CrawlerUtil, CrawlerLogger as CrawlerLogger
 from newsnlp import BaiduNLPProcessor
+logger = CrawlerLogger.Logger("../logs/raw_data_processor.log")
 # 特征文件路径
 FEATURE_PATH = '../files/FEATURE.xlsx'
 # 原始数据文件路径
 RAW_NEWS_PATH = '../files/WALLSTREETCN_FX_20160630_20180617.xlsx'
 # 新闻分词后保存路径
 SEGMENTED_NEWS_PATH = '../files/SEGMENTED_NEWS.csv'
-# 特征列表保存路径
-FEATURE_ITEM_PATH = '../files/FEATURE_ITEM.csv'
-# 特征向量保存路径
-FEATURE_VECTOR_PATH = '../files/FEATURE_VECTOR.csv'
+# 新闻情感分析后保存路径
+NEWS_ITEM_PATH = '../files/NEWS_ITEM.csv'
+# 新闻特征保存路径
+NEWS_FEATURE_PATH = '../files/NEWS_FEATURE.csv'
 # 实际价格文件路径
 ORIGIN_PRICE_PATH = '../files/USDCNY20160630_20171230.csv'
+# 特征向量文件路径
+FEATURE_VECTOR_PATH = '../files/FEATURE_VECTOR.csv'
 
 # 全局变量
 # 特征字典[AAAA:黄金]
@@ -22,12 +25,14 @@ newsList = list()
 newsSegmentationList = list()
 # 有关键词匹配的新闻列表：[1, 2018/6/17  20:17:46, OPEC]
 newsMappedList = list()
-# 情感特征列表：[1, 2018/6/17  20:17:46, [0, 0, 0.6, 0]]
-featureItemList = list()
-# 特征向量列表：[0, 0, 0.6, 0]
-featureVectorList = list()
-# USD/CNY价格数据列表：[2016/6/30 15:00,	6.6433]
+# 新闻情感分析后列表：[1, 2018/6/17  20:17:46, [0, 0, 0.6, 0]]
+newsItemList = list()
+# 新闻特征向量列表：[2018/6/30 15:00:00, 0, 0, 0.6, 0]
+newsFeatureList = list()
+# USD/CNY价格数据列表：[2018/6/30 15:00:00, 6.6433]
 originalPriceList = list()
+# 特征向量和目标值列表：[0, 0.2, 0.6, 0, ->0.001]
+featureVectorList = list()
 
 
 # 1.读取特征表
@@ -133,20 +138,14 @@ def news_sentiment():
             else:
                 feature_vector.append(0)
         feature_vector_item.append(feature_vector)
-        featureItemList.append(feature_vector_item)
+        newsItemList.append(feature_vector_item)
         feature_vector.insert(0, news_time)
-        featureVectorList.append(feature_vector)
+        newsFeatureList.append(feature_vector)
         logger.info(count)
         count += 1
-    CrawlerUtil.write_csv(FEATURE_ITEM_PATH, featureItemList)
-    CrawlerUtil.write_csv(FEATURE_VECTOR_PATH, featureVectorList)
+    CrawlerUtil.write_csv(NEWS_ITEM_PATH, newsItemList)
+    CrawlerUtil.write_csv(NEWS_FEATURE_PATH, newsFeatureList)
     logger.info("News Sentiment Done!")
-
-
-# USD/CNY价格数据处理
-def prepare_original_price():
-    global originalPriceList
-    originalPriceList = CrawlerUtil.read_csv(ORIGIN_PRICE_PATH)
 
 
 # 统计特征向量的计算
@@ -154,10 +153,10 @@ def feature_col_count():
     logger.info("In Count Feature Appear...")
     prepare_feature()
     feature_count_dict = dict()
-    global featureVectorList
-    featureVectorList = CrawlerUtil.read_csv(FEATURE_VECTOR_PATH)
+    global newsFeatureList
+    newsFeatureList = CrawlerUtil.read_csv(NEWS_FEATURE_PATH)
     feature_count_list = [0]*len(featureDict.keys())
-    for feature_vector in featureVectorList:
+    for feature_vector in newsFeatureList:
         feature_index = 0
         for feature_value_index in range(1, len(feature_vector)):
             if feature_vector[feature_value_index] != '0':
@@ -172,4 +171,27 @@ def feature_col_count():
     logger.info("Count Feature Appear Done!")
 
 
-logger = CrawlerLogger.Logger("../logs/raw_data_processor.log")
+# 生成特征向量，并与目标值对应
+def generate_feature_vector():
+    logger.info("In Generate Feature Vector...")
+    global newsFeatureList
+    newsFeatureList = CrawlerUtil.read_csv(NEWS_FEATURE_PATH)
+    global originalPriceList
+    originalPriceList = CrawlerUtil.read_csv(ORIGIN_PRICE_PATH)
+    # 新闻从20160630开始，价格从20160701开始
+    current_news_feature = newsFeatureList[0]
+    current_price = originalPriceList[0]
+    current_price_index = 0
+    print(current_news_feature)
+    print(current_price)
+    for next_index in range(1, len(newsFeatureList)):
+        next_news_feature = newsFeatureList[next_index]
+        next_news_time = next_news_feature[0]
+        for next_price_index in range(current_price_index + 1, len(originalPriceList)):
+            next_price = -1
+            if originalPriceList[next_price_index][0] >= next_news_time:
+                next_price = originalPriceList[next_price_index][1]
+            if next_price != -1:
+                price_delta = next_price - current_price
+        next_index += 1
+    logger.info("Generate Feature Vector Done!")

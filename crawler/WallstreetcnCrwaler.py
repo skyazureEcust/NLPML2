@@ -49,7 +49,7 @@ def get_news_item(start_date, end_date):
                 time = CrawlerUtil.convert_long_to_date(display_time)
                 file_content = file_content + time + "," + context + "\n"
                 # print(item_i+1, ": " , time, ", ", context_text)
-        CrawlerUtil.save_to_file('output/wallstreetcn_%s_%s.csv' % (start_date, end_date), file_content)
+        CrawlerUtil.save_to_file('../files/wallstreetcn_%s_%s.csv' % (start_date, end_date), file_content)
         file_content = ''
         # 无下一页数据时退出循环
         if cursor == '':

@@ -40,7 +40,7 @@ def get_usd_index(i_type, i_count):
 
         logger.info("Finished With %s Items Crawled." % (len(data_list)))
 
-    CrawlerUtil.save_to_file('output/USDIndex_%s.csv' % CrawlerUtil.get_now(), file_content)
+    CrawlerUtil.save_to_file('../files/USDIndex_%s.csv' % CrawlerUtil.get_now(), file_content)
 
 
 logger = CrawlerLogger.Logger("../logs/USDIndexCrwaler.log")
