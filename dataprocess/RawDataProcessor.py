@@ -240,7 +240,7 @@ def decay_influence(dt_news_time, dt_current_time):
     if delta_second > NEWS_INFLUENCE_DACAY_THRESHOLD:
         return 0
     if delta_second < NEWS_INFLUENCE_MOST:
-        influence_score = round(5/3 * delta_second, 2)
+        influence_score = 1/60 * delta_second
     else:
         influence_score = round(1200/1140 - 1/1140 * delta_second)
     return round(influence_score * FEATURE_VECTOR_SCALE, 4)
