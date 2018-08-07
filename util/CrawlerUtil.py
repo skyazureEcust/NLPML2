@@ -93,6 +93,13 @@ def read_csv(s_path):
         return list(reader)
 
 
+# 读取csv文件，返回reader
+def reader_csv(s_path):
+    with open(s_path) as csv_file:
+        reader = csv.reader(csv_file)
+        return reader
+
+
 # 保存为csv文件
 def write_csv(s_filename, list_data):
     # 使用数字和字符串的数字都可以
@@ -112,3 +119,60 @@ def get_interval_seconds(dt_time1, dt_time2):
     interval = dt_time1 - dt_time2
     interval_seconds = interval.days * 24 * 3600 + interval.seconds
     return interval_seconds
+
+
+# 比较两个时间相差的分钟数
+def get_interval_minutes(dt_time1, dt_time2):
+    return int(get_interval_seconds(dt_time1, dt_time2) / 60)
+
+
+# 获得标准采样时间点,1：1分钟，5：5分钟，10：10分钟
+def get_sample_time(dt_time, i_minute):
+    if i_minute == 1:
+        time_year = dt_time.year
+        time_month = dt_time.month
+        time_day = dt_time.day
+        time_hour = dt_time.hour
+        time_minute = dt_time.minute
+        sample_time = datetime.datetime(time_year, time_month, time_day, time_hour, time_minute)
+        return sample_time
+
+
+# 获得调整后的时间
+def get_minute_changed(dt_time, i_minute):
+    new_time = dt_time + datetime.timedelta(minutes=i_minute)
+    return new_time
+
+
+# 判断时间是否在闭市范围
+def is_in_market_close(s_date_time, s_market_open, s_market_close):
+    current_time = get_datetime_from_string(s_date_time).time()
+    market_open_time = datetime.datetime.strptime(s_market_open, '%H:%M:%S').time()
+    market_close_time = datetime.datetime.strptime(s_market_close, '%H:%M:%S').time()
+    if current_time > market_close_time or current_time < market_open_time:
+        return True
+    else:
+        return False
+
+
+# 根据新闻时间重设时间
+def reset_news_time(s_news_time, i_adjust, s_market_open, s_market_close):
+    news_date_time = get_datetime_from_string(s_news_time)
+    current_time = news_date_time.time()
+    market_open_time = datetime.datetime.strptime(s_market_open, '%H:%M:%S').time()
+    market_close_time = datetime.datetime.strptime(s_market_close, '%H:%M:%S').time()
+    # 闭市之后，00:00之前，日期增加一天，再设置时间
+    if current_time > market_close_time:
+        new_time_temp = news_date_time + datetime.timedelta(days=1)
+        new_date = new_time_temp.date()
+        new_news_time = new_date.strftime('%Y/%m/%d') + '  ' + s_market_open
+        new_news_time_adjusted = get_datetime_from_string(new_news_time) - datetime.timedelta(minutes=i_adjust)
+        return get_string_from_datetime(new_news_time_adjusted)
+    # 开市之前，只需设置时间
+    elif current_time < market_open_time:
+        new_date = news_date_time.date()
+        new_news_time = new_date.strftime('%Y/%m/%d') + '  ' + s_market_open
+        new_news_time_adjusted = get_datetime_from_string(new_news_time) - datetime.timedelta(minutes=i_adjust)
+        return get_string_from_datetime(new_news_time_adjusted)
+    else:
+        return s_news_time
