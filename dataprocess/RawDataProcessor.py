@@ -13,7 +13,7 @@ NEWS_ITEM_PATH = '../files/NEWS_ITEM.csv'
 NEWS_FEATURE_PATH = '../files/NEWS_FEATURE.csv'
 # 原始价格文件路径
 ORIGINAL_PRICE_PATH = '../files/ORIGINAL_PRICE.csv'
-ORIGINAL_PRICE_DEMO_PATH = '../files/ORIGINAL_PRICE_DEMO.csv'
+# ORIGINAL_PRICE_PATH = '../files/ORIGINAL_PRICE_DEMO.csv'
 # 预处理后价格文件路径
 PROCESSED_PRICE_PATH = '../files/PROCESSED_PRICE'
 # 特征向量文件路径
@@ -195,7 +195,7 @@ def feature_col_count():
 def process_original_price():
     logger.info("In Process Original Price...")
     global originalPriceList
-    originalPriceList = CrawlerUtil.read_csv(ORIGINAL_PRICE_DEMO_PATH)
+    originalPriceList = CrawlerUtil.read_csv(ORIGINAL_PRICE_PATH)
     sample_time = None
     sample_price_list = list()
     # 对每一个原始价格
@@ -246,6 +246,7 @@ def generate_feature_vector():
     processedPriceList = CrawlerUtil.read_csv(file_path)
     # 新闻从20160630开始到20171229，价格从20160701开始到20171229
     last_news_begin = 0
+    news_feature_begin_index = last_news_begin
     price_start_time = '2016/07/01  09:30:00'
     price_end_time = '2017/12/29  23:27:00'
     market_open_time = '09:30:00'
@@ -253,7 +254,7 @@ def generate_feature_vector():
     pre_price_item = list()
     pre_price_item.append(price_start_time)
     pre_price_item.append(0)
-    # 将闭市时间内的新闻统一设置为开市前NEWS_INFLUENCE_MOST秒时发生的
+    # 将闭市时间内的新闻统一设置为开市前NEWS_INFLUENCE_MOST分钟时发生的
     for news_index in range(0, len(newsFeatureList)):
         news_feature = newsFeatureList[news_index]
         news_time = news_feature[0]
@@ -261,32 +262,34 @@ def generate_feature_vector():
         news_feature[0] = CrawlerUtil.reset_news_time(news_time, NEWS_INFLUENCE_MOST, market_open_time,market_close_time)
         newsFeatureList[news_index] = news_feature
     for current_price_item in processedPriceList:
-        print(current_price_item[0])
-        print(CrawlerUtil.get_datetime_from_string(price_start_time) <= CrawlerUtil.get_datetime_from_string(current_price_item[0]) < CrawlerUtil.get_datetime_from_string(price_end_time))
         if price_start_time <= current_price_item[0] < price_end_time:
             # 计算价格的变化
-            price_delta = (float(current_price_item[1]) - float(pre_price_item[1])) * FEATURE_VECTOR_SCALE
+            price_delta = round((float(current_price_item[1]) - float(pre_price_item[1])) * FEATURE_VECTOR_SCALE,
+                                CURRENCY_PAIR_PRECISION)
             current_price_time = CrawlerUtil.get_datetime_from_string(current_price_item[0])
             pre_price_time = CrawlerUtil.get_datetime_from_string(pre_price_item[0])
             logger.debug(current_price_time)
             # 计算pre_price_time到current_price_time新闻的作用总和
-            last_interval_minutes = CrawlerUtil.get_interval_minutes(current_price_time, pre_price_time)
+            # last_interval_minutes >= 1
+            last_interval_minutes = int(CrawlerUtil.get_interval_seconds(current_price_time, pre_price_time) / 60)
             influence_feature_vector = [0.0] * feature_size
             # 对两个价格之间的每个采样点计算新闻的影响
+            is_influenced_price = False
             for minute_i in range(0, last_interval_minutes):
-                # 计算的时刻点
-                time_i = CrawlerUtil.get_minute_changed(pre_price_time, minute_i)
-                # 该时刻点影响对应的新闻
+                # 计算的时刻点，pre_price_time之后的时刻点，包括current_price_time
+                time_i = CrawlerUtil.get_minute_changed(pre_price_time, minute_i + 1)
+                # 该时刻点受到影响对应的新闻
                 for news_feature_begin_index in range(last_news_begin, len(newsFeatureList)):
-                    interval_minutes = CrawlerUtil.get_interval_minutes(
-                        time_i, CrawlerUtil.get_datetime_from_string(
-                            newsFeatureList[news_feature_begin_index][0]))
-                    if 0 <= interval_minutes <= NEWS_INFLUENCE_DACAY_THRESHOLD:
+                    interval_seconds = CrawlerUtil.get_interval_seconds(
+                        time_i, CrawlerUtil.get_datetime_from_string(newsFeatureList[news_feature_begin_index][0]))
+                    # 如果有新闻在影响范围内
+                    if 0 <= interval_seconds <= NEWS_INFLUENCE_DACAY_THRESHOLD * 60:
                         for news_feature_end_index in range(news_feature_begin_index, len(newsFeatureList)):
                             if CrawlerUtil.get_datetime_from_string(newsFeatureList[news_feature_end_index][0]) \
                                     > time_i:
                                 break
-                        str_begin_end = 'news:' + str(news_feature_begin_index) + ' : ' + str(news_feature_end_index - 1)
+                        str_begin_end = str(minute_i + 1) + ': news->' + str(news_feature_begin_index) + ' : ' + str(
+                            news_feature_end_index - 1)
                         logger.debug(str_begin_end)
                         for news_feature_index in range(news_feature_begin_index, news_feature_end_index):
                             current_news_feature = newsFeatureList[news_feature_index]
@@ -295,12 +298,14 @@ def generate_feature_vector():
                             for value_i in range(0, feature_size):
                                 influence_feature_vector[value_i] += float(current_news_feature[value_i + 1]) \
                                                                      * influence_score
+                        is_influenced_price = True
                         break
-                    elif interval_minutes < 0:
+                    elif interval_seconds < 0:
                         break
-                    last_news_begin = news_feature_begin_index
-            influence_feature_vector.append(price_delta)
-            featureVectorList.append(influence_feature_vector)
+                last_news_begin = news_feature_begin_index
+            if is_influenced_price:
+                influence_feature_vector.append(price_delta)
+                featureVectorList.append(influence_feature_vector)
         pre_price_item = current_price_item
     CrawlerUtil.write_csv(FEATURE_VECTOR_PATH, featureVectorList)
     logger.info("Generate Feature Vector Done!")
@@ -308,14 +313,15 @@ def generate_feature_vector():
 
 # 定义影响衰减函数
 def decay_influence(dt_news_time, dt_current_time):
-    delta_minutes = CrawlerUtil.get_interval_minutes(dt_current_time, dt_news_time)
-    if delta_minutes > NEWS_INFLUENCE_DACAY_THRESHOLD:
+    delta_seconds = CrawlerUtil.get_interval_seconds(dt_current_time, dt_news_time)
+    if delta_seconds > NEWS_INFLUENCE_DACAY_THRESHOLD * 60:
         return 0
-    if delta_minutes <= NEWS_INFLUENCE_MOST:
-        influence_score = 1/NEWS_INFLUENCE_MOST * delta_minutes
+    # 0-60秒
+    if delta_seconds <= NEWS_INFLUENCE_MOST * 60:
+        influence_score = 1/(NEWS_INFLUENCE_MOST * 60) * delta_seconds
     else:
         influence_score = NEWS_INFLUENCE_DACAY_THRESHOLD/(NEWS_INFLUENCE_DACAY_THRESHOLD - NEWS_INFLUENCE_MOST) \
-                          - 1/(NEWS_INFLUENCE_DACAY_THRESHOLD - NEWS_INFLUENCE_MOST) * delta_minutes
+                          - 1/(NEWS_INFLUENCE_DACAY_THRESHOLD - NEWS_INFLUENCE_MOST) * delta_seconds / 60
     return round(influence_score * FEATURE_VECTOR_SCALE, CURRENCY_PAIR_PRECISION)
 
 

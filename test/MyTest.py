@@ -18,3 +18,8 @@ market_close_time = '23:30:00'
 print(CrawlerUtil.reset_news_time(price_end_time, 1, market_open_time, market_close_time))
 
 print(CrawlerUtil.reset_news_time(price_begin_time, 2, market_open_time, market_close_time))
+
+
+i = -30
+
+print(int(i/60))

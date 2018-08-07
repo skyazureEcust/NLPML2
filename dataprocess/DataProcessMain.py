@@ -13,10 +13,10 @@ from dataprocess import RawDataProcessor
 # RawDataProcessor.news_sentiment()
 
 # 第三步，对原始价格数据进行预处理
-# RawDataProcessor.process_original_price()
+RawDataProcessor.process_original_price()
 
 # 第四步，生成特征向量和目标值
 RawDataProcessor.generate_feature_vector()
 
 # 第五步，缩减特征向量
-# RawDataProcessor.reduce_feature_vector()
+RawDataProcessor.reduce_feature_vector()

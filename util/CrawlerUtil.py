@@ -121,11 +121,6 @@ def get_interval_seconds(dt_time1, dt_time2):
     return interval_seconds
 
 
-# 比较两个时间相差的分钟数
-def get_interval_minutes(dt_time1, dt_time2):
-    return int(get_interval_seconds(dt_time1, dt_time2) / 60)
-
-
 # 获得标准采样时间点,1：1分钟，5：5分钟，10：10分钟
 def get_sample_time(dt_time, i_minute):
     if i_minute == 1:
