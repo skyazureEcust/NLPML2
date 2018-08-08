@@ -17,9 +17,9 @@ ORIGINAL_PRICE_PATH = '../files/ORIGINAL_PRICE.csv'
 # 预处理后价格文件路径
 PROCESSED_PRICE_PATH = '../files/PROCESSED_PRICE'
 # 特征向量文件路径
-FEATURE_VECTOR_PATH = '../files/FEATURE_VECTOR.csv'
+FEATURE_VECTOR_PATH = '../files/FEATURE_VECTOR'
 # 缩减后的特征向量文件路径
-REDUCED_FEATURE_VECTOR_PATH = '../files/REDUCED_FEATURE_VECTOR.csv'
+REDUCED_FEATURE_VECTOR_PATH = '../files/REDUCED_FEATURE_VECTOR'
 # CSV文件尾缀
 CSV_FILE_SUFFIX = '.csv'
 # 新闻影响衰减极限值：预设为30分钟
@@ -29,9 +29,16 @@ NEWS_INFLUENCE_MOST = 1
 # 特征向量缩放倍数
 FEATURE_VECTOR_SCALE = 10000
 # 价格取样长度，1：1分钟，5：5分钟，10：10分钟
-PRICE_SAMPLE_MINUTE = 1
+PRICE_SAMPLE_MINUTE = 10
 # 货币对精度
 CURRENCY_PAIR_PRECISION = 4
+# 开市时间
+MARKET_OPEN_TIME = '09:30:00'
+# 闭市时间
+MARKET_CLOSE_TIME = '23:30:00'
+# 价格时间区间
+PRICE_START_TIME = '2016/07/01  09:30:00'
+PRICE_END_TIME = '2017/12/29  23:27:00'
 
 # 全局变量
 # 特征字典[AAAA:黄金]
@@ -196,35 +203,54 @@ def process_original_price():
     logger.info("In Process Original Price...")
     global originalPriceList
     originalPriceList = CrawlerUtil.read_csv(ORIGINAL_PRICE_PATH)
-    sample_time = None
+    sample_datetime = None
     sample_price_list = list()
     # 对每一个原始价格
     for original_price in originalPriceList:
-        # 获取每一个价格对应的时间
-        price_time = CrawlerUtil.get_datetime_from_string(original_price[0])
-        if PRICE_SAMPLE_MINUTE == 1:
-            # 如果没有当前采样时间（第一个处理的时刻点）
-            if sample_time is None:
-                sample_time = CrawlerUtil.get_sample_time(price_time, PRICE_SAMPLE_MINUTE)
-            # 当前出来的时间与采样时间的差
-            time_interval = CrawlerUtil.get_interval_seconds(price_time, sample_time)
-            # 如果当前时间超过采样区间，则应属于下一个采样区间
-            if time_interval >= PRICE_SAMPLE_MINUTE * 60:
-                # 计算上一个采样时间的平均价格
+        logger.debug('price time: ' + original_price[0])
+        price_datetime = CrawlerUtil.get_datetime_from_string(original_price[0])
+        price_value = float(original_price[1])
+        if sample_datetime is None:
+            sample_datetime = CrawlerUtil.get_datetime_from_string(PRICE_START_TIME)
+        time_interval = CrawlerUtil.get_interval_seconds(price_datetime, sample_datetime)
+        # 价格时间在采集区间外(价格对应时间远早于采集时刻点)，取下一个价格
+        if time_interval < -PRICE_SAMPLE_MINUTE * 60 / 2:
+            continue
+        # 如果当前时间超过采样区间（晚于），先计算上一个采样时间的平均价格，再寻找下一个采样点
+        while time_interval >= PRICE_SAMPLE_MINUTE * 60 / 2:
+            # 如果当前采样点有价格
+            if len(sample_price_list) > 0:
                 price_sum = 0
                 for price_item in sample_price_list:
                     price_sum += price_item
-                average_price = round(price_sum / len(sample_price_list), CURRENCY_PAIR_PRECISION)
-                average_price_item = [CrawlerUtil.get_string_from_datetime(sample_time),
-                                      average_price]
+                average_price = round(price_sum / len(sample_price_list), CURRENCY_PAIR_PRECISION + 2)
+                sample_datetime_str = CrawlerUtil.get_string_from_datetime(sample_datetime)
+                average_price_item = [sample_datetime_str, average_price]
                 # 将采样时间及对应的计算后的价格加入列表
                 processedPriceList.append(average_price_item)
-                # 重置采样时间
-                sample_time = CrawlerUtil.get_sample_time(price_time, PRICE_SAMPLE_MINUTE)
                 # 重置采样点价格列表
                 sample_price_list = list()
-            # 加入当前采样点
-            sample_price_list.append(float(original_price[1]))
+            # 计算下一个采样点
+            sample_datetime = CrawlerUtil.get_next_sample_time(sample_datetime, PRICE_SAMPLE_MINUTE,
+                                                               MARKET_OPEN_TIME, MARKET_CLOSE_TIME)
+            time_interval = CrawlerUtil.get_interval_seconds(price_datetime, sample_datetime)
+        logger.debug('sample datetime:' + CrawlerUtil.get_string_from_datetime(sample_datetime))
+        # 价格时间在采集区间外
+        if sample_datetime > CrawlerUtil.get_datetime_from_string(PRICE_END_TIME):
+            break
+        # 属于当前采样点，加入当前采样点价格列表，前闭后开[,)
+        sample_price_list.append(price_value)
+    # 处理最后一个采集时刻的价格列表
+    # 如果当前采样点有价格
+    if len(sample_price_list) > 0:
+        price_sum = 0
+        for price_item in sample_price_list:
+            price_sum += price_item
+        average_price = round(price_sum / len(sample_price_list), CURRENCY_PAIR_PRECISION + 2)
+        sample_datetime_str = CrawlerUtil.get_string_from_datetime(sample_datetime)
+        average_price_item = [sample_datetime_str, average_price]
+        # 将采样时间及对应的计算后的价格加入列表
+        processedPriceList.append(average_price_item)
     file_path = PROCESSED_PRICE_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
     CrawlerUtil.write_csv(file_path, processedPriceList)
     logger.info("Process Original Price Done!")
@@ -247,22 +273,19 @@ def generate_feature_vector():
     # 新闻从20160630开始到20171229，价格从20160701开始到20171229
     last_news_begin = 0
     news_feature_begin_index = last_news_begin
-    price_start_time = '2016/07/01  09:30:00'
-    price_end_time = '2017/12/29  23:27:00'
-    market_open_time = '09:30:00'
-    market_close_time = '23:30:00'
     pre_price_item = list()
-    pre_price_item.append(price_start_time)
+    pre_price_item.append(PRICE_START_TIME)
     pre_price_item.append(0)
     # 将闭市时间内的新闻统一设置为开市前NEWS_INFLUENCE_MOST分钟时发生的
     for news_index in range(0, len(newsFeatureList)):
         news_feature = newsFeatureList[news_index]
         news_time = news_feature[0]
         # 重设新闻时间
-        news_feature[0] = CrawlerUtil.reset_news_time(news_time, NEWS_INFLUENCE_MOST, market_open_time,market_close_time)
+        news_feature[0] = CrawlerUtil.\
+            reset_news_time(news_time, NEWS_INFLUENCE_MOST, MARKET_OPEN_TIME, MARKET_CLOSE_TIME)
         newsFeatureList[news_index] = news_feature
     for current_price_item in processedPriceList:
-        if price_start_time <= current_price_item[0] < price_end_time:
+        if PRICE_START_TIME <= current_price_item[0] < PRICE_END_TIME:
             # 计算价格的变化
             price_delta = round((float(current_price_item[1]) - float(pre_price_item[1])) * FEATURE_VECTOR_SCALE,
                                 CURRENCY_PAIR_PRECISION)
@@ -307,7 +330,8 @@ def generate_feature_vector():
                 influence_feature_vector.append(price_delta)
                 featureVectorList.append(influence_feature_vector)
         pre_price_item = current_price_item
-    CrawlerUtil.write_csv(FEATURE_VECTOR_PATH, featureVectorList)
+    file_path = FEATURE_VECTOR_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
+    CrawlerUtil.write_csv(file_path, featureVectorList)
     logger.info("Generate Feature Vector Done!")
 
 
@@ -334,7 +358,8 @@ def reduce_feature_vector():
     reduced_feature_vector_list = list()
     feature_list = list()
     feature_count_threshold = 2
-    featureVectorList = CrawlerUtil.read_csv(FEATURE_VECTOR_PATH)
+    file_path = FEATURE_VECTOR_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
+    featureVectorList = CrawlerUtil.read_csv(file_path)
     feature_count_dict = dict()
     feature_count_list = [0] * origin_feature_num
     is_title = True
@@ -365,5 +390,6 @@ def reduce_feature_vector():
                     logger.error(feature_vector)
                     logger.error(feature_value_index)
         reduced_feature_vector_list.append(reduced_feature_vector)
-    CrawlerUtil.write_csv(REDUCED_FEATURE_VECTOR_PATH, reduced_feature_vector_list)
+    file_path = REDUCED_FEATURE_VECTOR_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
+    CrawlerUtil.write_csv(file_path, reduced_feature_vector_list)
     logger.info("Reduce Feature Vector Done!")

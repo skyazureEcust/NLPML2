@@ -6,7 +6,7 @@ import logging
 class Logger:
     def __init__(self, path, c_level=logging.DEBUG, f_level=logging.DEBUG):
         self.logger = logging.getLogger(path)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         fmt = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S')
         # 设置CMD日志
         sh = logging.StreamHandler()

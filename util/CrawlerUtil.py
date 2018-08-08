@@ -116,21 +116,28 @@ def get_datetime_from_cell(s_cell):
 
 # 比较两个时间相差的秒数
 def get_interval_seconds(dt_time1, dt_time2):
-    interval = dt_time1 - dt_time2
-    interval_seconds = interval.days * 24 * 3600 + interval.seconds
+    interval_seconds = int((dt_time1 - dt_time2).total_seconds())
     return interval_seconds
 
 
-# 获得标准采样时间点,1：1分钟，5：5分钟，10：10分钟
-def get_sample_time(dt_time, i_minute):
-    if i_minute == 1:
-        time_year = dt_time.year
-        time_month = dt_time.month
-        time_day = dt_time.day
-        time_hour = dt_time.hour
-        time_minute = dt_time.minute
-        sample_time = datetime.datetime(time_year, time_month, time_day, time_hour, time_minute)
-        return sample_time
+# 获得标准采样时间点，i_minute：1，1分钟；5，5分钟；10，10分钟
+def get_next_sample_time(dt_datetime, i_minute, s_market_open, s_market_close):
+    next_sample_time = dt_datetime + datetime.timedelta(minutes=i_minute)
+    if is_in_market_close(next_sample_time, s_market_open, s_market_close):
+        # 最后一个采样时刻点是23:30，距离开始600分钟，此处可进一步根据开闭市时间灵活控制
+        next_sample_time = dt_datetime + datetime.timedelta(minutes=600)
+    return next_sample_time
+
+
+# 获得标准采样时间点列表，i_minute：1，1分钟；5，5分钟；10，10分钟
+def get_sample_time_list(s_market_open, s_market_close, i_minute):
+    sample_time_list = list()
+    cur_sample_time = datetime.datetime.strptime(s_market_open, '%H:%M:%S')
+    market_close_time = datetime.datetime.strptime(s_market_close, '%H:%M:%S')
+    while cur_sample_time < market_close_time:
+        sample_time_list.append(cur_sample_time.time())
+        cur_sample_time = cur_sample_time + datetime.timedelta(minutes=i_minute)
+    return sample_time_list
 
 
 # 获得调整后的时间
@@ -140,8 +147,8 @@ def get_minute_changed(dt_time, i_minute):
 
 
 # 判断时间是否在闭市范围
-def is_in_market_close(s_date_time, s_market_open, s_market_close):
-    current_time = get_datetime_from_string(s_date_time).time()
+def is_in_market_close(dt_datetime, s_market_open, s_market_close):
+    current_time = dt_datetime.time()
     market_open_time = datetime.datetime.strptime(s_market_open, '%H:%M:%S').time()
     market_close_time = datetime.datetime.strptime(s_market_close, '%H:%M:%S').time()
     if current_time > market_close_time or current_time < market_open_time:
@@ -150,7 +157,7 @@ def is_in_market_close(s_date_time, s_market_open, s_market_close):
         return False
 
 
-# 根据新闻时间重设时间
+# 根据时间限制调整时间
 def reset_news_time(s_news_time, i_adjust, s_market_open, s_market_close):
     news_date_time = get_datetime_from_string(s_news_time)
     current_time = news_date_time.time()
