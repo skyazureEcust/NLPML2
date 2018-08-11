@@ -29,7 +29,7 @@ NEWS_INFLUENCE_MOST = 1
 # 特征向量缩放倍数
 FEATURE_VECTOR_SCALE = 10000
 # 价格取样长度，1：1分钟，5：5分钟，10：10分钟
-PRICE_SAMPLE_MINUTE = 10
+PRICE_SAMPLE_MINUTE = 120
 # 货币对精度
 CURRENCY_PAIR_PRECISION = 4
 # 开市时间
@@ -276,6 +276,8 @@ def generate_feature_vector():
     pre_price_item = list()
     pre_price_item.append(PRICE_START_TIME)
     pre_price_item.append(0)
+    price_start_time = CrawlerUtil.get_datetime_from_string(PRICE_START_TIME)
+    price_end_time = CrawlerUtil.get_datetime_from_string(PRICE_END_TIME)
     # 将闭市时间内的新闻统一设置为开市前NEWS_INFLUENCE_MOST分钟时发生的
     for news_index in range(0, len(newsFeatureList)):
         news_feature = newsFeatureList[news_index]
@@ -285,11 +287,11 @@ def generate_feature_vector():
             reset_news_time(news_time, NEWS_INFLUENCE_MOST, MARKET_OPEN_TIME, MARKET_CLOSE_TIME)
         newsFeatureList[news_index] = news_feature
     for current_price_item in processedPriceList:
-        if PRICE_START_TIME <= current_price_item[0] < PRICE_END_TIME:
+        current_price_time = CrawlerUtil.get_datetime_from_string(current_price_item[0])
+        if price_start_time <= current_price_time < price_end_time:
             # 计算价格的变化
             price_delta = round((float(current_price_item[1]) - float(pre_price_item[1])) * FEATURE_VECTOR_SCALE,
                                 CURRENCY_PAIR_PRECISION)
-            current_price_time = CrawlerUtil.get_datetime_from_string(current_price_item[0])
             pre_price_time = CrawlerUtil.get_datetime_from_string(pre_price_item[0])
             logger.debug(current_price_time)
             # 计算pre_price_time到current_price_time新闻的作用总和
