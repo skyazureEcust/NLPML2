@@ -1,6 +1,6 @@
-from util import CrawlerUtil as CrawlerUtil, CrawlerLogger as CrawlerLogger
+from util import CommonUtil, LogHelper
 from newsnlp import BaiduNLPProcessor
-logger = CrawlerLogger.Logger("../logs/raw_data_processor.log")
+logger = LogHelper.Logger("../logs/raw_data_processor.log")
 # 特征文件路径
 FEATURE_PATH = '../files/FEATURE.xlsx'
 # 原始数据文件路径
@@ -37,8 +37,10 @@ MARKET_OPEN_TIME = '09:30:00'
 # 闭市时间
 MARKET_CLOSE_TIME = '23:30:00'
 # 价格时间区间
-PRICE_START_TIME = '2016/07/01  09:30:00'
-PRICE_END_TIME = '2017/12/29  23:27:00'
+# PRICE_START_TIME = '2016/07/01  09:30:00'
+# PRICE_END_TIME = '2017/12/29  23:27:00'
+PRICE_START_TIME = '2018/06/15  09:30:00'
+PRICE_END_TIME = '2018/08/10  23:27:00'
 
 # 全局变量
 # 特征字典[AAAA:黄金]
@@ -65,7 +67,7 @@ processedPriceList = list()
 def prepare_feature():
     logger.info("In Prepare Feature...")
     # 获取sheet
-    feature_data = CrawlerUtil.read_excel(FEATURE_PATH)
+    feature_data = CommonUtil.read_excel(FEATURE_PATH)
     feature_table = feature_data.sheet_by_index(0)
     # 获取总行数
     feature_rows = feature_table.nrows
@@ -81,13 +83,13 @@ def prepare_feature():
 # 2.读取原始新闻数据
 def prepare_raw_news():
     logger.info("In Prepare Raw News...")
-    raw_news_data = CrawlerUtil.read_excel(RAW_NEWS_PATH)
+    raw_news_data = CommonUtil.read_excel(RAW_NEWS_PATH)
     raw_news_table = raw_news_data.sheet_by_index(0)
     raw_news_rows = raw_news_table.nrows
     for rowN in range(0, raw_news_rows):
         news_item = list()
         news_index = int(raw_news_table.cell_value(rowN, 0))
-        news_time = CrawlerUtil.get_datetime_from_cell(raw_news_table.cell_value(rowN, 1))
+        news_time = CommonUtil.get_datetime_from_cell(raw_news_table.cell_value(rowN, 1))
         news_content = raw_news_table.cell_value(rowN, 2)
         news_item.append(news_index)
         news_item.append(news_time)
@@ -103,11 +105,11 @@ def news_segment():
     for news_item in newsList:
         word_list = BaiduNLPProcessor.lexer(news_item[2])
         word_list.insert(0, news_item[0])
-        word_list.insert(1, CrawlerUtil.get_string_from_datetime(news_item[1]))
+        word_list.insert(1, CommonUtil.get_string_from_datetime(news_item[1]))
         newsSegmentationList.append(word_list)
         logger.info(count)
         count += 1
-    CrawlerUtil.write_csv(SEGMENTED_NEWS_PATH, newsSegmentationList)
+    CommonUtil.write_csv(SEGMENTED_NEWS_PATH, newsSegmentationList)
     logger.info("Segment News...Done!")
 
 
@@ -115,7 +117,7 @@ def news_segment():
 def read_segmented_news():
     logger.info("In Read Segmented News...")
     global newsSegmentationList
-    newsSegmentationList = CrawlerUtil.read_csv(SEGMENTED_NEWS_PATH)
+    newsSegmentationList = CommonUtil.read_csv(SEGMENTED_NEWS_PATH)
     logger.info("Read Segmented News Done!")
 
 
@@ -169,8 +171,8 @@ def news_sentiment():
         newsFeatureList.append(feature_vector)
         logger.info(count)
         count += 1
-    CrawlerUtil.write_csv(NEWS_ITEM_PATH, newsItemList)
-    CrawlerUtil.write_csv(NEWS_FEATURE_PATH, newsFeatureList)
+    CommonUtil.write_csv(NEWS_ITEM_PATH, newsItemList)
+    CommonUtil.write_csv(NEWS_FEATURE_PATH, newsFeatureList)
     logger.info("News Sentiment Done!")
 
 
@@ -180,7 +182,7 @@ def feature_col_count():
     prepare_feature()
     feature_count_dict = dict()
     global newsFeatureList
-    newsFeatureList = CrawlerUtil.read_csv(NEWS_FEATURE_PATH)
+    newsFeatureList = CommonUtil.read_csv(NEWS_FEATURE_PATH)
     feature_count_list = [0] * len(featureDict.keys())
     for feature_vector in newsFeatureList:
         feature_index = 0
@@ -202,17 +204,17 @@ def feature_col_count():
 def process_original_price():
     logger.info("In Process Original Price...")
     global originalPriceList
-    originalPriceList = CrawlerUtil.read_csv(ORIGINAL_PRICE_PATH)
+    originalPriceList = CommonUtil.read_csv(ORIGINAL_PRICE_PATH)
     sample_datetime = None
     sample_price_list = list()
     # 对每一个原始价格
     for original_price in originalPriceList:
         logger.debug('price time: ' + original_price[0])
-        price_datetime = CrawlerUtil.get_datetime_from_string(original_price[0])
+        price_datetime = CommonUtil.get_datetime_from_string(original_price[0])
         price_value = float(original_price[1])
         if sample_datetime is None:
-            sample_datetime = CrawlerUtil.get_datetime_from_string(PRICE_START_TIME)
-        time_interval = CrawlerUtil.get_interval_seconds(price_datetime, sample_datetime)
+            sample_datetime = CommonUtil.get_datetime_from_string(PRICE_START_TIME)
+        time_interval = CommonUtil.get_interval_seconds(price_datetime, sample_datetime)
         # 价格时间在采集区间外(价格对应时间远早于采集时刻点)，取下一个价格
         if time_interval < -PRICE_SAMPLE_MINUTE * 60 / 2:
             continue
@@ -224,19 +226,19 @@ def process_original_price():
                 for price_item in sample_price_list:
                     price_sum += price_item
                 average_price = round(price_sum / len(sample_price_list), CURRENCY_PAIR_PRECISION + 2)
-                sample_datetime_str = CrawlerUtil.get_string_from_datetime(sample_datetime)
+                sample_datetime_str = CommonUtil.get_string_from_datetime(sample_datetime)
                 average_price_item = [sample_datetime_str, average_price]
                 # 将采样时间及对应的计算后的价格加入列表
                 processedPriceList.append(average_price_item)
                 # 重置采样点价格列表
                 sample_price_list = list()
             # 计算下一个采样点
-            sample_datetime = CrawlerUtil.get_next_sample_time(sample_datetime, PRICE_SAMPLE_MINUTE,
+            sample_datetime = CommonUtil.get_next_sample_time(sample_datetime, PRICE_SAMPLE_MINUTE,
                                                                MARKET_OPEN_TIME, MARKET_CLOSE_TIME)
-            time_interval = CrawlerUtil.get_interval_seconds(price_datetime, sample_datetime)
-        logger.debug('sample datetime:' + CrawlerUtil.get_string_from_datetime(sample_datetime))
+            time_interval = CommonUtil.get_interval_seconds(price_datetime, sample_datetime)
+        logger.debug('sample datetime:' + CommonUtil.get_string_from_datetime(sample_datetime))
         # 价格时间在采集区间外
-        if sample_datetime > CrawlerUtil.get_datetime_from_string(PRICE_END_TIME):
+        if sample_datetime > CommonUtil.get_datetime_from_string(PRICE_END_TIME):
             break
         # 属于当前采样点，加入当前采样点价格列表，前闭后开[,)
         sample_price_list.append(price_value)
@@ -247,12 +249,12 @@ def process_original_price():
         for price_item in sample_price_list:
             price_sum += price_item
         average_price = round(price_sum / len(sample_price_list), CURRENCY_PAIR_PRECISION + 2)
-        sample_datetime_str = CrawlerUtil.get_string_from_datetime(sample_datetime)
+        sample_datetime_str = CommonUtil.get_string_from_datetime(sample_datetime)
         average_price_item = [sample_datetime_str, average_price]
         # 将采样时间及对应的计算后的价格加入列表
         processedPriceList.append(average_price_item)
     file_path = PROCESSED_PRICE_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
-    CrawlerUtil.write_csv(file_path, processedPriceList)
+    CommonUtil.write_csv(file_path, processedPriceList)
     logger.info("Process Original Price Done!")
 
 
@@ -266,51 +268,51 @@ def generate_feature_vector():
     featureVectorList.append(title_list)
     feature_size = len(featureDict.keys())
     global newsFeatureList
-    newsFeatureList = CrawlerUtil.read_csv(NEWS_FEATURE_PATH)
+    newsFeatureList = CommonUtil.read_csv(NEWS_FEATURE_PATH)
     global processedPriceList
     file_path = PROCESSED_PRICE_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
-    processedPriceList = CrawlerUtil.read_csv(file_path)
+    processedPriceList = CommonUtil.read_csv(file_path)
     # 新闻从20160630开始到20171229，价格从20160701开始到20171229
     last_news_begin = 0
     news_feature_begin_index = last_news_begin
     pre_price_item = list()
     pre_price_item.append(PRICE_START_TIME)
     pre_price_item.append(0)
-    price_start_time = CrawlerUtil.get_datetime_from_string(PRICE_START_TIME)
-    price_end_time = CrawlerUtil.get_datetime_from_string(PRICE_END_TIME)
+    price_start_time = CommonUtil.get_datetime_from_string(PRICE_START_TIME)
+    price_end_time = CommonUtil.get_datetime_from_string(PRICE_END_TIME)
     # 将闭市时间内的新闻统一设置为开市前NEWS_INFLUENCE_MOST分钟时发生的
     for news_index in range(0, len(newsFeatureList)):
         news_feature = newsFeatureList[news_index]
         news_time = news_feature[0]
         # 重设新闻时间
-        news_feature[0] = CrawlerUtil.\
+        news_feature[0] = CommonUtil.\
             reset_news_time(news_time, NEWS_INFLUENCE_MOST, MARKET_OPEN_TIME, MARKET_CLOSE_TIME)
         newsFeatureList[news_index] = news_feature
     for current_price_item in processedPriceList:
-        current_price_time = CrawlerUtil.get_datetime_from_string(current_price_item[0])
+        current_price_time = CommonUtil.get_datetime_from_string(current_price_item[0])
         if price_start_time <= current_price_time < price_end_time:
             # 计算价格的变化
             price_delta = round((float(current_price_item[1]) - float(pre_price_item[1])) * FEATURE_VECTOR_SCALE,
                                 CURRENCY_PAIR_PRECISION)
-            pre_price_time = CrawlerUtil.get_datetime_from_string(pre_price_item[0])
+            pre_price_time = CommonUtil.get_datetime_from_string(pre_price_item[0])
             logger.debug(current_price_time)
             # 计算pre_price_time到current_price_time新闻的作用总和
             # last_interval_minutes >= 1
-            last_interval_minutes = int(CrawlerUtil.get_interval_seconds(current_price_time, pre_price_time) / 60)
+            last_interval_minutes = int(CommonUtil.get_interval_seconds(current_price_time, pre_price_time) / 60)
             influence_feature_vector = [0.0] * feature_size
             # 对两个价格之间的每个采样点计算新闻的影响
             is_influenced_price = False
             for minute_i in range(0, last_interval_minutes):
                 # 计算的时刻点，pre_price_time之后的时刻点，包括current_price_time
-                time_i = CrawlerUtil.get_minute_changed(pre_price_time, minute_i + 1)
+                time_i = CommonUtil.get_minute_changed(pre_price_time, minute_i + 1)
                 # 该时刻点受到影响对应的新闻
                 for news_feature_begin_index in range(last_news_begin, len(newsFeatureList)):
-                    interval_seconds = CrawlerUtil.get_interval_seconds(
-                        time_i, CrawlerUtil.get_datetime_from_string(newsFeatureList[news_feature_begin_index][0]))
+                    interval_seconds = CommonUtil.get_interval_seconds(
+                        time_i, CommonUtil.get_datetime_from_string(newsFeatureList[news_feature_begin_index][0]))
                     # 如果有新闻在影响范围内
                     if 0 <= interval_seconds <= NEWS_INFLUENCE_DACAY_THRESHOLD * 60:
                         for news_feature_end_index in range(news_feature_begin_index, len(newsFeatureList)):
-                            if CrawlerUtil.get_datetime_from_string(newsFeatureList[news_feature_end_index][0]) \
+                            if CommonUtil.get_datetime_from_string(newsFeatureList[news_feature_end_index][0]) \
                                     > time_i:
                                 break
                         str_begin_end = str(minute_i + 1) + ': news->' + str(news_feature_begin_index) + ' : ' + str(
@@ -318,7 +320,7 @@ def generate_feature_vector():
                         logger.debug(str_begin_end)
                         for news_feature_index in range(news_feature_begin_index, news_feature_end_index):
                             current_news_feature = newsFeatureList[news_feature_index]
-                            influence_score = decay_influence(CrawlerUtil.get_datetime_from_string(
+                            influence_score = decay_influence(CommonUtil.get_datetime_from_string(
                                 current_news_feature[0]), time_i)
                             for value_i in range(0, feature_size):
                                 influence_feature_vector[value_i] += float(current_news_feature[value_i + 1]) \
@@ -333,13 +335,13 @@ def generate_feature_vector():
                 featureVectorList.append(influence_feature_vector)
         pre_price_item = current_price_item
     file_path = FEATURE_VECTOR_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
-    CrawlerUtil.write_csv(file_path, featureVectorList)
+    CommonUtil.write_csv(file_path, featureVectorList)
     logger.info("Generate Feature Vector Done!")
 
 
 # 定义影响衰减函数
 def decay_influence(dt_news_time, dt_current_time):
-    delta_seconds = CrawlerUtil.get_interval_seconds(dt_current_time, dt_news_time)
+    delta_seconds = CommonUtil.get_interval_seconds(dt_current_time, dt_news_time)
     if delta_seconds > NEWS_INFLUENCE_DACAY_THRESHOLD * 60:
         return 0
     # 0-60秒
@@ -361,7 +363,7 @@ def reduce_feature_vector():
     feature_list = list()
     feature_count_threshold = 2
     file_path = FEATURE_VECTOR_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
-    featureVectorList = CrawlerUtil.read_csv(file_path)
+    featureVectorList = CommonUtil.read_csv(file_path)
     feature_count_dict = dict()
     feature_count_list = [0] * origin_feature_num
     is_title = True
@@ -393,5 +395,5 @@ def reduce_feature_vector():
                     logger.error(feature_value_index)
         reduced_feature_vector_list.append(reduced_feature_vector)
     file_path = REDUCED_FEATURE_VECTOR_PATH + '_' + str(PRICE_SAMPLE_MINUTE) + CSV_FILE_SUFFIX
-    CrawlerUtil.write_csv(file_path, reduced_feature_vector_list)
+    CommonUtil.write_csv(file_path, reduced_feature_vector_list)
     logger.info("Reduce Feature Vector Done!")

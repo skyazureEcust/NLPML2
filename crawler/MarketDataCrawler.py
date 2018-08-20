@@ -1,6 +1,6 @@
 import requests
 import json
-from util import CrawlerUtil as CrawlerUtil, CrawlerLogger as CrawlerLogger
+from util import CommonUtil, LogHelper
 
 
 # 根据时间段抓取市场行情数据
@@ -31,26 +31,26 @@ def get_market_data(i_type, i_count, s_data_type):
             for item_j in range(len(data_items)):
                 # 日期格式转换
                 if item_j == 0:
-                    data_item += CrawlerUtil.convert_long_to_date(data_items[item_j]) + ','
+                    data_item += CommonUtil.convert_long_to_date(data_items[item_j]) + ','
                 else:
                     data_item += str(data_items[item_j]) + ','
             file_content += data_item + '\n'
         logger.info("Finished With %s Items Crawled." % (len(data_list)))
-        CrawlerUtil.save_to_file('../files/%s.csv' % (s_data_type + '_' + CrawlerUtil.get_now()), file_content)
+        CommonUtil.save_to_file('../files/%s.csv' % (s_data_type + '_' + CommonUtil.get_now()), file_content)
     else:
         logger.warning("Response Code is %s, Please Check!" % page.status_code)
 
 
-logger = CrawlerLogger.Logger("../logs/MarketDataCrawler.log")
-time_type = 8
+logger = LogHelper.Logger("../logs/MarketDataCrawler.log")
+time_type = 5
 data_count = 1000
-data_type = 'CHINA10YEAR'
+data_type = 'USDCNY'
 get_market_data(time_type, data_count, data_type)
 
 # if len(sys.argv) > 2:
 #     for num in range(1, 3):
 #         logger.info("parameter %d is %s " % (num, sys.argv[num]))
-#         if CrawlerUtil.check_integer(sys.argv[num]):
+#         if CommonUtil.check_integer(sys.argv[num]):
 #             if num == 1:
 #                 data_type = sys.argv[num]
 #             if num == 2:

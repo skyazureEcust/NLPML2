@@ -1,6 +1,6 @@
 from aip import AipNlp
 import time
-from util import CrawlerUtil as CrawlerUtil, CrawlerLogger as CrawlerLogger
+from util import LogHelper
 
 APP_ID = '11415218'
 API_KEY = '2nG3xSaPag0e6sndbLFo2Zvv'
@@ -110,4 +110,5 @@ def word_sim(s_word1, s_word2):
     # # 带参数调用词义相似度
     # client.wordSimEmbedding(word1, word2, options)
 
-logger = CrawlerLogger.Logger("../logs/baidu_npl_processor.log")
+
+logger = LogHelper.Logger("../logs/baidu_npl_processor.log")
