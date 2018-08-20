@@ -1,4 +1,4 @@
-from newsnlp import BaiduNLPProcessor
+from nlp import BaiduNLPProcessor
 
 text = '美国政府发布加征关税的商品清单，将对从中国进口的500亿美元商品征收25%关税。'
 result = BaiduNLPProcessor.sentiment_classify(text)

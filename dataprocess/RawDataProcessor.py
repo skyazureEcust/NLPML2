@@ -1,5 +1,6 @@
 from util import CommonUtil, LogHelper
-from newsnlp import BaiduNLPProcessor
+from nlp import BaiduNLPProcessor
+
 logger = LogHelper.Logger("../logs/raw_data_processor.log")
 # 特征文件路径
 FEATURE_PATH = '../files/FEATURE.xlsx'
