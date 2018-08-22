@@ -81,4 +81,12 @@ def adjust_feature_vector():
     CommonUtil.write_csv('../files/marketdata/ADJUSTED_FEATURE_VECTOR.csv', feature_vector_list)
 
 
-adjust_feature_vector()
+# 抓取FEATURE_NAME列表中的测试数据
+def get_feature_data_test():
+    for feature_name in FEATURE_NAME_LIST:
+        MarketDataCrawler.get_market_data(8, 1, feature_name)
+        time.sleep(5)
+
+
+get_feature_data_test()
+
