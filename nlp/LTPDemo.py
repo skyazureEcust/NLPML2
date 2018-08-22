@@ -63,7 +63,7 @@ recognizer.release()  # 释放模型
 
 
 # 依存句法分析
-parser = Parser() # 初始化实例
+parser = Parser()  # 初始化实例
 parser.load(par_model_path)  # 加载模型
 arcs = parser.parse(words, postags)  # 句法分析
 print("\t".join("%d:%s" % (arc.head, arc.relation) for arc in arcs))

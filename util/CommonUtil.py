@@ -57,6 +57,10 @@ def get_now():
 def get_datetime_from_string(s_str):
     return datetime.datetime.strptime(s_str, '%Y/%m/%d  %H:%M:%S')
 
+# 字符串转时间
+def get_datetime_from_string_(s_str):
+    return datetime.datetime.strptime(s_str, '%Y-%m-%d  %H:%M:%S')
+
 
 # 把datetime转成字符串
 def get_string_from_datetime(dt_time):

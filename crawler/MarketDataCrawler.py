@@ -3,8 +3,16 @@ import json
 from util import CommonUtil, LogHelper
 
 
+MARKET_DATA_PATH = '../files/marketdata'
+logger = LogHelper.Logger("../logs/MarketDataCrawler.log")
 # 根据时间段抓取市场行情数据
-# data_type：USDOLLARINDEX、USDCNH、USDCNY、EURUSD、GBPUSD、XAUUSD、UKOIL、SPX500INDEX、000001、US10YEAR、CHINA10YEAR
+# data_type：USDOLLARINDEX（美元指数）、USDCNY（在岸人民币）、EURUSD（欧元/美元）、USDCNH（离岸人民币）、USDJPY（美元/日元）、GBPUSD（英镑/美元）、USDCAD（美元/加元）
+# XAUUSD（黄金）、UKOIL（布伦特原油）、UKOIL（WTI原油）、XAGUSD（白银）
+# 000001（上证指数）、399001（深证成指）、SPX500INDEX（标普500）、NASINDEX（纳斯达克）、HKG33INDEX（恒生指数）、
+# US10YEAR（美国10年期国债）、CHINA10YEAR（中国10年期国债）
+# CHINA50（富时中国A50股指期货）、HKG33（恒生指数期货）、SPX500（标普500指数期货）、NAS100（纳斯达克100指数期货）
+# i_type：1（1m）、2（5m）、3（15m）、4（30m）、5（1H）、7（4H）、8（1D）、10（1W）、11（1M）
+# i_count：爬取的记录数，最大为1000
 def get_market_data(i_type, i_count, s_data_type):
     url_pattern = 'https://forexdata.wallstreetcn.com/kline?prod_code=' + s_data_type + \
                   '&candle_period=' + str(i_type) + \
@@ -36,16 +44,16 @@ def get_market_data(i_type, i_count, s_data_type):
                     data_item += str(data_items[item_j]) + ','
             file_content += data_item + '\n'
         logger.info("Finished With %s Items Crawled." % (len(data_list)))
-        CommonUtil.save_to_file('../files/%s.csv' % (s_data_type + '_' + CommonUtil.get_now()), file_content)
+        CommonUtil.save_to_file(MARKET_DATA_PATH + '/%s.csv' % s_data_type, file_content)
     else:
         logger.warning("Response Code is %s, Please Check!" % page.status_code)
 
 
-logger = LogHelper.Logger("../logs/MarketDataCrawler.log")
-time_type = 5
-data_count = 1000
-data_type = 'USDCNY'
-get_market_data(time_type, data_count, data_type)
+
+# time_type = 5
+# data_count = 1000
+# data_type = 'USDCNY'
+# get_market_data(time_type, data_count, data_type)
 
 # if len(sys.argv) > 2:
 #     for num in range(1, 3):

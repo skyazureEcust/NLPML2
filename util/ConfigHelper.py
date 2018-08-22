@@ -1,0 +1,41 @@
+# 特征文件路径
+FEATURE_PATH = '../files/FEATURE.xlsx'
+# 原始数据文件路径
+RAW_NEWS_PATH = '../files/RAW_NEWS.xlsx'
+RAW_NEWS_DEMO_PATH = '../files/RAW_NEWS_DEMO.xlsx'
+# 新闻分词后保存路径
+SEGMENTED_NEWS_PATH = '../files/SEGMENTED_NEWS.csv'
+# 新闻情感分析后保存路径
+NEWS_ITEM_PATH = '../files/NEWS_ITEM.csv'
+# 新闻特征保存路径
+NEWS_FEATURE_PATH = '../files/NEWS_FEATURE.csv'
+# 原始价格文件路径
+ORIGINAL_PRICE_PATH = '../files/ORIGINAL_PRICE.csv'
+# ORIGINAL_PRICE_PATH = '../files/ORIGINAL_PRICE_DEMO.csv'
+# 预处理后价格文件路径
+PROCESSED_PRICE_PATH = '../files/PROCESSED_PRICE'
+# 特征向量文件路径
+FEATURE_VECTOR_PATH = '../files/FEATURE_VECTOR'
+# 缩减后的特征向量文件路径
+REDUCED_FEATURE_VECTOR_PATH = '../files/REDUCED_FEATURE_VECTOR'
+# CSV文件尾缀
+CSV_FILE_SUFFIX = '.csv'
+# 新闻影响衰减极限值：预设为30分钟
+NEWS_INFLUENCE_DACAY_THRESHOLD = 30
+# 新闻影响极大值所在的时间点：预设为1分钟
+NEWS_INFLUENCE_MOST = 1
+# 特征向量缩放倍数
+FEATURE_VECTOR_SCALE = 10000
+# 价格取样长度，1：1分钟，5：5分钟，10：10分钟
+PRICE_SAMPLE_MINUTE = 120
+# 货币对精度
+CURRENCY_PAIR_PRECISION = 4
+# 开市时间
+MARKET_OPEN_TIME = '09:30:00'
+# 闭市时间
+MARKET_CLOSE_TIME = '23:30:00'
+# 价格时间区间
+# PRICE_START_TIME = '2016/07/01  09:30:00'
+# PRICE_END_TIME = '2017/12/29  23:27:00'
+PRICE_START_TIME = '2018/06/15  09:30:00'
+PRICE_END_TIME = '2018/08/10  23:27:00'
